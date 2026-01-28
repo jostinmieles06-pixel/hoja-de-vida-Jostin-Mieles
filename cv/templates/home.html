@@ -23,7 +23,15 @@
 <!-- PERFIL PRINCIPAL -->
 <section class="profile-card">
   <div class="profile-avatar">
-    {{ perfil.nombres|first }}{{ perfil.apellidos|first }}
+    {% if perfil.foto %}
+      <img
+        src="{{ perfil.foto.url }}"
+        alt="Foto de perfil"
+        class="profile-avatar-img"
+      >
+    {% else %}
+      {{ perfil.nombres|first }}{{ perfil.apellidos|first }}
+    {% endif %}
   </div>
 
   <div class="profile-info">

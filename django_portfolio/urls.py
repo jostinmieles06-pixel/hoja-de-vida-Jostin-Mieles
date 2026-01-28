@@ -8,9 +8,6 @@ urlpatterns = [
     path("", include("cv.urls")),
 ]
 
-# 🔥 ESTO ES LO QUE HACE QUE LA FOTO SE VEA
 if settings.DEBUG:
-    urlpatterns += static(
-        settings.MEDIA_URL,
-        document_root=settings.MEDIA_ROOT
-    )
+    # Servir media files localmente
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
