@@ -1,50 +1,51 @@
-{% extends "base.html" %}
-{% block title %}Cursos{% endblock %}
+{% extends "layout_dashboard.html" %}
+{% block dashboard_content %}
 
-{% block content %}
-<div class="sec-shell">
-  <h1 class="sec-title">🎓 Cursos realizados</h1>
+<header class="section-header">
+  <h1>🎓 Cursos realizados</h1>
+  <p class="text-muted">
+    Formación académica y certificaciones obtenidas.
+  </p>
+</header>
 
-  {% if items %}
-    {% for x in items %}
-      <div class="card">
-        <h2 class="card-title">{{ x.nombrecurso }}</h2>
+<div class="cards-grid">
 
-        <div class="kv">
-          {% if x.descripcioncurso %}<div><b>Descripción:</b> {{ x.descripcioncurso }}</div>{% endif %}
-          {% if x.entidadpatrocinadora %}<div><b>Entidad patrocinadora:</b> {{ x.entidadpatrocinadora }}</div>{% endif %}
-          {% if x.totalhoras %}<div><b>Horas:</b> {{ x.totalhoras }}</div>{% endif %}
+{% for c in items %}
+  <div class="cv-card">
 
-          {% if x.fechainicio or x.fechafin %}
-            <div><b>Fechas:</b> {{ x.fechainicio }} {% if x.fechafin %}→ {{ x.fechafin }}{% endif %}</div>
-          {% endif %}
+    {% if c.totalhoras %}
+      <div class="cv-badge">{{ c.totalhoras }}h</div>
+    {% endif %}
 
-          {% if x.nombrecontactoauspicia %}<div><b>Contacto:</b> {{ x.nombrecontactoauspicia }}</div>{% endif %}
-          {% if x.telefonocontactoauspicia %}<div><b>Tel. contacto:</b> {{ x.telefonocontactoauspicia }}</div>{% endif %}
-          {% if x.emailempresapatrocinadora %}<div><b>Email entidad:</b> {{ x.emailempresapatrocinadora }}</div>{% endif %}
-        </div>
+    <h3>{{ c.nombrecurso }}</h3>
 
-        <div class="cert-row">
-          {% if x.certificado_imagen %}
-            <img class="cert-mini" src="{{ x.certificado_imagen.url }}" alt="Certificado">
-          {% elif x.certificado_pdf %}
-            <iframe class="pdf-mini" src="{{ x.certificado_pdf.url }}#toolbar=0&navpanes=0&scrollbar=0"></iframe>
-          {% endif %}
+    <div class="cv-meta">
+      🏢 {{ c.entidadpatrocinadora|default:"—" }}<br>
+      📅 {{ c.fechainicio }} – {{ c.fechafin }}
+    </div>
 
-          <div class="cert-actions">
-            {% if x.certificado_pdf %}
-              <a class="btn-outline" target="_blank" href="{{ x.certificado_pdf.url }}">Abrir PDF</a>
-            {% endif %}
+    {% if c.descripcioncurso %}
+      <p class="cv-desc">
+        {{ c.descripcioncurso }}
+      </p>
+    {% endif %}
 
-            {% if x.rutacertificado %}
-              <a class="btn-outline" target="_blank" rel="noopener" href="{{ x.rutacertificado }}">Ver certificado</a>
-            {% endif %}
-          </div>
-        </div>
+    {% if c.certificado_imagen %}
+      <div class="cv-preview">
+        <a href="{{ c.certificado_imagen.url }}" target="_blank" class="cert-preview">
+  <img src="{{ c.certificado_imagen.url }}" alt="Certificado">
+</a>
+
       </div>
-    {% endfor %}
-  {% endif %}
+    {% else %}
+      <p class="cv-desc">ℹ Sin certificado adjunto</p>
+    {% endif %}
 
-  <a class="back-link" href="{% url 'home' %}">← Volver al inicio</a>
+  </div>
+{% empty %}
+  <p class="text-muted">No hay cursos registrados.</p>
+{% endfor %}
+
 </div>
+
 {% endblock %}

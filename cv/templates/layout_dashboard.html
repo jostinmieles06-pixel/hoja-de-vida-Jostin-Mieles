@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">HV</div>
+
+    <nav>
+      <a href="{% url 'home' %}">Dashboard</a>
+      <a href="{% url 'datos_personales' %}">Datos</a>
+      <a href="{% url 'cursos' %}">Cursos</a>
+      <a href="{% url 'experiencia' %}">Experiencia</a>
+      <a href="{% url 'productos_academicos' %}">Prod. Acad.</a>
+      <a href="{% url 'productos_laborales' %}">Prod. Lab.</a>
+      <a href="{% url 'reconocimientos' %}">Reconoc.</a>
+      <a href="{% url 'venta_garage' %}">Venta</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    {# 🔥 SOLO ESTE BLOCK, UNA VEZ #}
+    {% block dashboard_content %}
+    {% endblock %}
+
+  </main>
+
+</div>
+{% endblock %}

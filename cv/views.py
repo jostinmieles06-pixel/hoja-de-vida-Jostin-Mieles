@@ -169,13 +169,24 @@ def datos_personales(request):
 
 def cursos(request):
     perfil = _get_perfil_activo()
-    items = (
-        perfil.cursos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechafin", "-fechainicio", "-idcursorealizado")
-        if perfil else []
-    )
-    return render(request, "secciones/cursos.html", {"perfil": perfil, "items": items})
+    items = []
+
+    if perfil:
+        qs = perfil.cursos.filter(
+            activarparaqueseveaenfront=True
+        ).order_by("-fechafin", "-fechainicio", "-idcursorealizado")
+
+        for c in qs:
+            c.is_pdf = False
+            if c.certificado_imagen and c.certificado_imagen.name:
+                c.is_pdf = c.certificado_imagen.name.lower().endswith(".pdf")
+            items.append(c)
+
+    return render(request, "secciones/cursos.html", {
+        "perfil": perfil,
+        "items": items
+    })
+
 
 
 def experiencia(request):
@@ -191,36 +202,65 @@ def experiencia(request):
 
 def productos_academicos(request):
     perfil = _get_perfil_activo()
-    # no tiene fecha, lo dejamos por id
-    items = (
-        perfil.productos_academicos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-idproductoacademico")
-        if perfil else []
-    )
-    return render(request, "secciones/productos_academicos.html", {"perfil": perfil, "items": items})
+    items = []
+
+    if perfil:
+        qs = perfil.productos_academicos.filter(
+            activarparaqueseveaenfront=True
+        ).order_by("-idproductoacademico")
+
+        for p in qs:
+            p.is_pdf = False
+            if p.certificado_imagen and p.certificado_imagen.name:
+                p.is_pdf = p.certificado_imagen.name.lower().endswith(".pdf")
+            items.append(p)
+
+    return render(request, "secciones/productos_academicos.html", {
+        "perfil": perfil,
+        "items": items
+    })
 
 
 def productos_laborales(request):
     perfil = _get_perfil_activo()
-    items = (
-        perfil.productos_laborales
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechaproducto", "-idproductolaboral")
-        if perfil else []
-    )
-    return render(request, "secciones/productos_laborales.html", {"perfil": perfil, "items": items})
+    items = []
 
+    if perfil:
+        qs = perfil.productos_laborales.filter(
+            activarparaqueseveaenfront=True
+        ).order_by("-fechaproducto", "-idproductolaboral")
+
+        for p in qs:
+            p.is_pdf = False
+            if p.certificado_imagen and p.certificado_imagen.name:
+                p.is_pdf = p.certificado_imagen.name.lower().endswith(".pdf")
+            items.append(p)
+
+    return render(request, "secciones/productos_laborales.html", {
+        "perfil": perfil,
+        "items": items
+    })
 
 def reconocimientos(request):
     perfil = _get_perfil_activo()
-    items = (
-        perfil.reconocimientos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechareconocimiento", "-idreconocimiento")
-        if perfil else []
-    )
-    return render(request, "secciones/reconocimientos.html", {"perfil": perfil, "items": items})
+    items = []
+
+    if perfil:
+        qs = perfil.reconocimientos.filter(
+            activarparaqueseveaenfront=True
+        ).order_by("-fechareconocimiento", "-idreconocimiento")
+
+        for r in qs:
+            r.is_pdf = False
+            if r.certificado_imagen and r.certificado_imagen.name:
+                r.is_pdf = r.certificado_imagen.name.lower().endswith(".pdf")
+            items.append(r)
+
+    return render(request, "secciones/reconocimientos.html", {
+        "perfil": perfil,
+        "items": items
+    })
+
 
 
 def venta_garage(request):
@@ -231,7 +271,11 @@ def venta_garage(request):
         .order_by("-fecha", "-idventagarage")
         if perfil else []
     )
-    return render(request, "secciones/venta_garage.html", {"perfil": perfil, "items": items})
+
+    return render(request, "secciones/venta_garage.html", {
+        "perfil": perfil,
+        "items": items
+    })
 
 
 # =========================

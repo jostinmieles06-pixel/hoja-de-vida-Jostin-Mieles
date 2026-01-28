@@ -200,6 +200,19 @@ class Datospersonales(models.Model):
     def __str__(self):
         return f"{self.nombres or ''} {self.apellidos or ''}".strip() or f"Perfil {self.idperfil}"
 
+    # =========================
+    # ✅ ALIAS PARA TEMPLATES (PARA SIEMPRE)
+    # =========================
+    @property
+    def foto(self):
+        # Para que perfil.foto funcione en templates viejos
+        return self.foto_perfil
+
+    @property
+    def lugar(self):
+        # Para que perfil.lugar funcione en templates viejos
+        return self.lugarnacimiento
+
 
 # =========================
 # MIXIN PARA CERTIFICADOS

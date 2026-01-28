@@ -1,45 +1,35 @@
-{% extends "base.html" %}
-{% block title %}Productos laborales{% endblock %}
+{% extends "layout_dashboard.html" %}
+{% block dashboard_content %}
 
-{% block content %}
-<div class="sec-shell">
-  <h1 class="sec-title">💼 Productos laborales</h1>
+<h1>🧰 Productos laborales</h1>
 
-  {% if items %}
-    {% for x in items %}
-      <div class="card">
-        <h2 class="card-title">{{ x.nombreproducto }}</h2>
+<div class="cards-grid">
+{% for item in items %}
+  <div class="cv-card">
 
-        <div class="kv">
-          {% if x.fechaproducto %}<div><b>Fecha:</b> {{ x.fechaproducto }}</div>{% endif %}
-          {% if x.descripcion %}<div><b>Descripción:</b> {{ x.descripcion }}</div>{% endif %}
-        </div>
+    <h3>{{ item.nombreproducto }}</h3>
 
-        {% if x.imagenproducto %}
-          <img class="prod-mini" src="{{ x.imagenproducto.url }}" alt="Producto">
-        {% endif %}
+    <div class="cv-desc">
+      {{ item.descripcion }}
+    </div>
 
-        <div class="cert-row">
-          {% if x.certificado_imagen %}
-            <img class="cert-mini" src="{{ x.certificado_imagen.url }}" alt="Certificado">
-          {% elif x.certificado_pdf %}
-            <iframe class="pdf-mini" src="{{ x.certificado_pdf.url }}#toolbar=0&navpanes=0&scrollbar=0"></iframe>
-          {% endif %}
+    {% if item.imagenproducto %}
+      <img src="{{ item.imagenproducto.url }}" class="cv-preview">
+    {% endif %}
 
-          <div class="cert-actions">
-            {% if x.certificado_pdf %}
-              <a class="btn-outline" target="_blank" href="{{ x.certificado_pdf.url }}">Abrir PDF</a>
-            {% endif %}
+    <div class="cv-footer">
+      {% if item.certificado_imagen %}
+        <a href="{{ item.certificado_imagen.url }}" target="_blank" class="cv-btn primary">
+          👁 Ver documento
+        </a>
+        <a href="{{ item.certificado_imagen.url }}" download class="cv-btn outline">
+          ⬇ Descargar PDF
+        </a>
+      {% endif %}
+    </div>
 
-            {% if x.rutacertificado %}
-              <a class="btn-outline" target="_blank" rel="noopener" href="{{ x.rutacertificado }}">Ver certificado</a>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  {% endif %}
-
-  <a class="back-link" href="{% url 'home' %}">← Volver al inicio</a>
+  </div>
+{% endfor %}
 </div>
+
 {% endblock %}
