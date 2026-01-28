@@ -4,6 +4,10 @@ psycopg2-binary
 dj-database-url
 python-dotenv
 whitenoise
+
+django-storages[azure]
+azure-storage-blob
+
 Pillow
 PyPDF2
 requests
