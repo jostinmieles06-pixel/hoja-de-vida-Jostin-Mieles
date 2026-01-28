@@ -1,31 +1,34 @@
 from pathlib import Path
 import os
-import dj_database_url
 from dotenv import load_dotenv
 
-# Cargar .env SOLO en local (Render ignora .env)
-load_dotenv()
-
+# =========================
+# BASE
+# =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ==================================================
-# SEGURIDAD
-# ==================================================
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-DEBUG = os.getenv("DEBUG", "1") == "1"
+# Cargar .env solo en local
+load_dotenv()
 
-# ==================================================
-# HOSTS
-# ==================================================
+# =========================
+# SEGURIDAD
+# =========================
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+DEBUG = os.getenv("DEBUG", "0") == "1"
+
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     ".onrender.com",
 ]
 
-# ==================================================
-# APPS
-# ==================================================
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.onrender.com",
+]
+
+# =========================
+# APLICACIONES
+# =========================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -34,13 +37,16 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "storages",   # Azure Blob
+    # Azure Storage
+    "storages",
+
+    # Tu app
     "cv",
 ]
 
-# ==================================================
+# =========================
 # MIDDLEWARE
-# ==================================================
+# =========================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -52,12 +58,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# =========================
+# URLS / WSGI
+# =========================
 ROOT_URLCONF = "django_portfolio.urls"
-WSGI_APPLICATION = "django_portfolio.wsgi.application"
 
-# ==================================================
-# TEMPLATES
-# ==================================================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -74,30 +79,26 @@ TEMPLATES = [
     },
 ]
 
-# ==================================================
-# DATABASE
-# ==================================================
-DATABASE_URL = os.getenv("DATABASE_URL")
+WSGI_APPLICATION = "django_portfolio.wsgi.application"
 
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=not DEBUG,
-        )
+# =========================
+# BASE DE DATOS
+# =========================
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "OPTIONS": {"sslmode": "require"},
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
-# ==================================================
-# PASSWORD VALIDATORS
-# ==================================================
+# =========================
+# PASSWORDS
+# =========================
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -105,66 +106,34 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ==================================================
-# I18N
-# ==================================================
-LANGUAGE_CODE = "es-es"
-TIME_ZONE = "UTC"
+# =========================
+# INTERNACIONALIZACIÓN
+# =========================
+LANGUAGE_CODE = "es-ec"
+TIME_ZONE = "America/Guayaquil"
 USE_I18N = True
 USE_TZ = True
 
-# ==================================================
-# STATIC FILES (WHITENOISE)
-# ==================================================
+# =========================
+# STATIC FILES
+# =========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# ==================================================
-# STORAGE: STATIC + MEDIA
-# ==================================================
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-USE_AZURE = bool(
-    os.getenv("AZURE_ACCOUNT_NAME")
-    and os.getenv("AZURE_ACCOUNT_KEY")
-    and os.getenv("AZURE_CONTAINER")
-)
+# =========================
+# MEDIA - AZURE BLOB STORAGE (🔥 CLAVE 🔥)
+# =========================
+DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
 
-if USE_AZURE:
-    # -------- MEDIA EN AZURE --------
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.azure_storage.AzureStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
+AZURE_ACCOUNT_NAME = os.getenv("AZURE_ACCOUNT_NAME")
+AZURE_ACCOUNT_KEY = os.getenv("AZURE_ACCOUNT_KEY")
+AZURE_CONTAINER = os.getenv("AZURE_CONTAINER", "media")
 
-    AZURE_ACCOUNT_NAME = os.getenv("AZURE_ACCOUNT_NAME")
-    AZURE_ACCOUNT_KEY = os.getenv("AZURE_ACCOUNT_KEY")
-    AZURE_CONTAINER = os.getenv("AZURE_CONTAINER")
+MEDIA_URL = f"https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
 
-    AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
-    AZURE_OVERWRITE_FILES = False
-    AZURE_SSL = True
-
-    MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
-
-else:
-    # -------- MEDIA LOCAL --------
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
-
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = BASE_DIR / "media"
-
-# ==================================================
-# DEFAULT
-# ==================================================
+# =========================
+# DEFAULTS
+# =========================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
