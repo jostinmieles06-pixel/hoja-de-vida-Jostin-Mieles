@@ -9,6 +9,17 @@
 
     <h3>{{ item.nombreproducto }}</h3>
 
+    <!-- ETIQUETA ESTADO -->
+    <span class="estado-badge
+          {% if item.estadoproducto == 'Bueno' %}
+            estado-bueno
+          {% elif item.estadoproducto == 'Regular' %}
+            estado-regular
+          {% endif %}
+    ">
+      {{ item.estadoproducto }}
+    </span>
+
     <div class="cv-meta">
       💰 ${{ item.valordelbien }}
     </div>
@@ -26,3 +37,4 @@
 </div>
 
 {% endblock %}
+

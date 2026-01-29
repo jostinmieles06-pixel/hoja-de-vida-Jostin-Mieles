@@ -290,7 +290,9 @@ def imprimir_hoja_vida(request):
     if not perfil.permitir_impresion:
         return HttpResponseForbidden("No autorizado", status=403)
 
-    # ✅ Orden por fecha en todas las secciones (más reciente -> más antigua)
+    # =========================
+    # Consultas ordenadas
+    # =========================
     cursos_qs = list(
         perfil.cursos
         .filter(activarparaqueseveaenfront=True)
@@ -323,7 +325,6 @@ def imprimir_hoja_vida(request):
     )
 
     cert_imgs, normal_imgs = _collect_images(perfil, cursos_qs, exp_qs, pa_qs, pl_qs, rec_qs)
-
     FONT, FONT_B = _register_pretty_fonts()
 
     response = HttpResponse(content_type="application/pdf")
@@ -345,16 +346,16 @@ def imprimir_hoja_vida(request):
     margin = 1.2 * cm
     sidebar_w = 5.7 * cm
     gap = 0.8 * cm
-
-    sidebar_w_total = margin + sidebar_w + gap / 2
     content_x = margin + sidebar_w + gap
     content_w = W - content_x - margin
-
     lead_small = 12.5
 
+    # =========================
+    # Helpers de layout
+    # =========================
     def draw_sidebar_background():
         c.setFillColor(navy)
-        c.rect(0, 0, sidebar_w_total, H, stroke=0, fill=1)
+        c.rect(0, 0, margin + sidebar_w + gap / 2, H, stroke=0, fill=1)
 
     def draw_circle_image(image_reader, cx, cy, r):
         c.saveState()
@@ -369,9 +370,13 @@ def imprimir_hoja_vida(request):
         c.setLineWidth(1)
         c.line(margin, y, margin + sidebar_w - 0.2 * cm, y)
 
+    # =========================
+    # Sidebar content
+    # =========================
     def draw_sidebar_content():
         top_y = H - margin - 0.4 * cm
 
+        # FOTO PERFIL
         if perfil.foto_perfil and getattr(perfil.foto_perfil, "name", None):
             try:
                 img_reader = _image_reader_from_field(perfil.foto_perfil)
@@ -379,18 +384,22 @@ def imprimir_hoja_vida(request):
             except Exception:
                 pass
 
+        # NOMBRE ENVUELTO
         nombre = f"{(perfil.nombres or '').strip()} {(perfil.apellidos or '').strip()}".strip() or "Perfil"
         c.setFillColor(white)
         c.setFont(FONT_B, 14.2)
-        c.drawString(margin, top_y - 4.05 * cm, nombre[:28])
+        y_actual = _draw_wrapped(c, nombre, margin, top_y - 4.05 * cm, sidebar_w - 0.2 * cm, FONT_B, 14.2, 16)
 
+        # SUBTÍTULO / DESCRIPCIÓN PERFIL
         desc_local = _clean(perfil.descripcionperfil)
         if desc_local:
+            y_desc = y_actual - 0.25 * cm
             c.setFillColor(colors.HexColor("#d7e6ff"))
             c.setFont(FONT, 9.6)
-            _draw_wrapped(c, desc_local, margin, top_y - 4.65 * cm, sidebar_w - 0.2 * cm, FONT, 9.6, 12)
+            y_actual = _draw_wrapped(c, desc_local, margin, y_desc, sidebar_w - 0.2 * cm, FONT, 9.6, 12)
 
-        yL = top_y - 5.9 * cm
+        # DATOS PERSONALES
+        yL = y_actual - 0.9 * cm
         hr_sidebar(yL + 0.45 * cm)
         c.setFillColor(colors.HexColor("#d7e6ff"))
         c.setFont(FONT_B, 10)
@@ -420,16 +429,22 @@ def imprimir_hoja_vida(request):
             c.setFillColor(white)
             c.setFont(FONT, 9.5)
             yL = _draw_wrapped(c, val, margin, yL, sidebar_w - 0.2 * cm, FONT, 9.5, 11.5)
-            yL -= 0.2 * cm
+            yL -= 0.25 * cm
             if yL < 1.6 * cm:
                 break
 
+    # =========================
+    # New page
+    # =========================
     def new_page(with_sidebar=True):
         c.showPage()
         if with_sidebar:
             draw_sidebar_background()
             draw_sidebar_content()
 
+    # =========================
+    # Content title y card
+    # =========================
     def content_title(y, s):
         c.setFillColor(text)
         c.setFont(FONT_B, 13.8)
@@ -442,23 +457,17 @@ def imprimir_hoja_vida(request):
     def content_card(y, title_s, pairs, notes=None):
         pairs = _pairs_from_fields(pairs)
         notes = _clean(notes)
-
         if not pairs and not notes:
             return y
-
         if y < 4.0 * cm:
             new_page(with_sidebar=True)
             y = H - margin - 0.6 * cm
-
         inner_x = content_x
         inner_w = content_w
-
         c.setFillColor(navy2)
         c.setFont(FONT_B, 11.6)
         c.drawString(inner_x, y - 0.2 * cm, (title_s or "")[:92])
-
         yy = y - 0.75 * cm
-
         for label, val in pairs:
             c.setFillColor(text)
             c.setFont(FONT_B, 9.8)
@@ -467,12 +476,10 @@ def imprimir_hoja_vida(request):
             c.setFont(FONT, 9.8)
             yy = _draw_wrapped(c, val, inner_x + 3.25 * cm, yy, inner_w - 3.25 * cm, FONT, 9.8, lead_small)
             yy -= 2
-
             if yy < 2.2 * cm:
                 new_page(with_sidebar=True)
                 y = H - margin - 0.6 * cm
                 yy = y - 0.9 * cm
-
         if notes:
             yy -= 6
             c.setFillColor(text)
@@ -482,48 +489,46 @@ def imprimir_hoja_vida(request):
             c.setFillColor(muted)
             c.setFont(FONT, 9.8)
             yy = _draw_wrapped(c, notes, inner_x, yy, inner_w, FONT, 9.8, lead_small)
-
         yy -= 0.25 * cm
         c.setStrokeColor(border)
         c.setLineWidth(0.7)
         c.line(content_x, yy, content_x + content_w, yy)
-
         return yy - 0.45 * cm
 
-    # ========== Página CV ==========
+    # =========================
+    # Dibujar todo
+    # =========================
     draw_sidebar_background()
     draw_sidebar_content()
 
-    desc = _clean(perfil.descripcionperfil)
     yR = H - margin - 0.6 * cm
-
+    desc = _clean(perfil.descripcionperfil)
     if desc:
         yR = content_title(yR, "Perfil profesional")
         yR = content_card(yR, "Resumen", [], desc)
         yR -= 0.2 * cm
 
+    # Secciones
     def section(title_name, items, draw_item):
         nonlocal yR
         if not items:
             return
-
         if yR < 4.0 * cm:
             new_page(with_sidebar=True)
             yR = H - margin - 0.6 * cm
-
         yR = content_title(yR, title_name)
-
         for it in items:
             if yR < 3.2 * cm:
                 new_page(with_sidebar=True)
                 yR = H - margin - 0.6 * cm
                 yR = content_title(yR, title_name)
-
             yR = draw_item(it)
             yR -= 0.10 * cm
-
         yR -= 0.25 * cm
 
+    # =========================
+    # Secciones de datos
+    # =========================
     section("Experiencia laboral", exp_qs, lambda it: content_card(
         yR,
         ((it.cargodesempenado or "Experiencia") + (f" — {it.nombrempresa}" if it.nombrempresa else "")).strip(),
@@ -593,28 +598,26 @@ def imprimir_hoja_vida(request):
         it.descripcion
     ))
 
-    # ========== Certificados full page - sin sidebar ==========
+    # =========================
+    # Certificados full page
+    # =========================
     if cert_imgs:
         for ev in cert_imgs:
             new_page(with_sidebar=False)
-
             c.setFillColor(navy2)
             c.rect(0, H - 2.0 * cm, W, 2.0 * cm, stroke=0, fill=1)
             c.setFillColor(white)
             c.setFont(FONT_B, 13.5)
             c.drawString(margin, H - 1.3 * cm, f'{ev["section"]} | {ev["label"]}'[:100])
-
             top = H - 2.35 * cm
             bottom = margin
             left = margin
             right = W - margin
             box_w = right - left
             box_h = top - bottom
-
             c.setFillColor(colors.white)
             c.setStrokeColor(border)
             c.roundRect(left, bottom, box_w, box_h, 10, stroke=1, fill=1)
-
             try:
                 img_reader = _image_reader_from_field(ev["field"])
                 c.drawImage(
@@ -632,10 +635,11 @@ def imprimir_hoja_vida(request):
                 c.setFont(FONT, 11)
                 c.drawString(left + 0.6 * cm, top - 1.0 * cm, "No se pudo cargar la imagen del certificado.")
 
-    # ========== Imágenes normales grid (al final) - sin sidebar ==========
+    # =========================
+    # Imágenes normales
+    # =========================
     if normal_imgs:
         new_page(with_sidebar=False)
-
         c.setFillColor(navy2)
         c.rect(0, H - 2.0 * cm, W, 2.0 * cm, stroke=0, fill=1)
         c.setFillColor(white)
@@ -643,16 +647,14 @@ def imprimir_hoja_vida(request):
         c.drawString(margin, H - 1.3 * cm, "Imágenes")
 
         y_ev = H - 2.55 * cm
-
         col_w = (W - 2 * margin - 0.55 * cm) / 2
         img_h = 6.0 * cm
         caption_h = 1.05 * cm
         block_h = img_h + caption_h + 0.5 * cm
-
         x1 = margin
         x2 = margin + col_w + 0.55 * cm
-
         i = 0
+
         while i < len(normal_imgs):
             if y_ev - block_h < 1.6 * cm:
                 new_page(with_sidebar=False)
@@ -663,11 +665,9 @@ def imprimir_hoja_vida(request):
                     break
                 ev = normal_imgs[i]
                 i += 1
-
                 c.setStrokeColor(border)
                 c.setFillColor(colors.white)
                 c.roundRect(x, y_ev - img_h, col_w, img_h, 10, stroke=1, fill=1)
-
                 try:
                     img_reader = _image_reader_from_field(ev["field"])
                     c.drawImage(
@@ -682,15 +682,12 @@ def imprimir_hoja_vida(request):
                     c.setFillColor(colors.red)
                     c.setFont(FONT, 9.5)
                     c.drawString(x + 0.25 * cm, y_ev - 0.7 * cm, "No se pudo cargar la imagen.")
-
                 c.setFillColor(chip)
                 c.setStrokeColor(border)
                 c.roundRect(x, y_ev - img_h - caption_h, col_w, caption_h, 9, stroke=1, fill=1)
-
                 c.setFillColor(navy)
                 c.setFont(FONT_B, 9.2)
                 c.drawString(x + 0.25 * cm, y_ev - img_h - 0.5 * cm, (ev["section"] or "")[:30])
-
                 c.setFillColor(text)
                 c.setFont(FONT, 9.1)
                 cap_y = y_ev - img_h - 0.83 * cm

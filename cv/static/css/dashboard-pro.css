@@ -927,3 +927,30 @@ body {
   object-fit: cover;
   border-radius: 50%;
 }
+/* =========================
+   BADGE ESTADO VENTA GARAGE
+   (MINI ETIQUETA)
+========================= */
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 4px 0 8px;
+  padding: 2px 8px;      /* 👈 más pequeño */
+  border-radius: 6px;   /* 👈 menos redondo */
+  font-size: 11px;      /* 👈 mini */
+  font-weight: 600;
+  line-height: 1;
+  width: fit-content;   /* 👈 NO se estira */
+}
+
+/* 🟢 BUENO */
+.estado-bueno {
+  background-color: #22c55e;
+  color: #ffffff;
+}
+
+/* 🟡 REGULAR */
+.estado-regular {
+  background-color: #fde047;
+  color: #1f2937;
+}
