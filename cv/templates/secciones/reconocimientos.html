@@ -7,10 +7,44 @@
 
   {% for r in items %}
     <div class="item-card">
+
       <h3>{{ r.tiporeconocimiento }}</h3>
+
       <p><b>Entidad:</b> {{ r.entidadpatrocinadora }}</p>
       <p><b>Fecha:</b> {{ r.fechareconocimiento }}</p>
+
       <p>{{ r.descripcionreconocimiento }}</p>
+
+      <!-- IMAGEN DEL RECONOCIMIENTO -->
+      {% if r.imagenreconocimiento %}
+        <img 
+          src="{{ r.imagenreconocimiento.url }}" 
+          alt="{{ r.tiporeconocimiento }}"
+          class="cv-preview"
+        >
+      {% endif %}
+
+      <!-- PDF DEL RECONOCIMIENTO -->
+      {% if r.documento_pdf %}
+        <div class="cv-footer">
+          <a 
+            href="{{ r.documento_pdf.url }}" 
+            target="_blank" 
+            class="cv-btn primary"
+          >
+            👁 Ver documento
+          </a>
+
+          <a 
+            href="{{ r.documento_pdf.url }}" 
+            download 
+            class="cv-btn outline"
+          >
+            ⬇ Descargar PDF
+          </a>
+        </div>
+      {% endif %}
+
     </div>
   {% empty %}
     <p>No hay reconocimientos registrados.</p>

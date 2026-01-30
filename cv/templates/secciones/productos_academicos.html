@@ -13,22 +13,39 @@
       {{ item.descripcion }}
     </div>
 
+    <!-- IMAGEN DEL PRODUCTO -->
     {% if item.imagenproducto %}
-      <img src="{{ item.imagenproducto.url }}" class="cv-preview">
+      <img 
+        src="{{ item.imagenproducto.url }}" 
+        alt="{{ item.nombreproducto }}"
+        class="cv-preview"
+      >
     {% endif %}
 
-    <div class="cv-footer">
-      {% if item.certificado_imagen %}
-        <a href="{{ item.certificado_imagen.url }}" target="_blank" class="cv-btn primary">
+    <!-- PDF DEL PRODUCTO -->
+    {% if item.certificado_pdf %}
+      <div class="cv-footer">
+        <a 
+          href="{{ item.certificado_pdf.url }}" 
+          target="_blank" 
+          class="cv-btn primary"
+        >
           👁 Ver documento
         </a>
-        <a href="{{ item.certificado_imagen.url }}" download class="cv-btn outline">
+
+        <a 
+          href="{{ item.certificado_pdf.url }}" 
+          download 
+          class="cv-btn outline"
+        >
           ⬇ Descargar PDF
         </a>
-      {% endif %}
-    </div>
+      </div>
+    {% endif %}
 
   </div>
+{% empty %}
+  <p class="text-muted">No hay productos académicos registrados.</p>
 {% endfor %}
 </div>
 
