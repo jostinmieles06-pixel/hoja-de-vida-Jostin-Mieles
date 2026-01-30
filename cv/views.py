@@ -460,7 +460,7 @@ def imprimir_hoja_vida(request):
         if not pairs and not notes:
             return y
         if y < 4.0 * cm:
-            new_page(with_sidebar=True)
+            new_page(with_sidebar=False)
             y = H - margin - 0.6 * cm
         inner_x = content_x
         inner_w = content_w
@@ -477,7 +477,7 @@ def imprimir_hoja_vida(request):
             yy = _draw_wrapped(c, val, inner_x + 3.25 * cm, yy, inner_w - 3.25 * cm, FONT, 9.8, lead_small)
             yy -= 2
             if yy < 2.2 * cm:
-                new_page(with_sidebar=True)
+                new_page(with_sidebar=False)
                 y = H - margin - 0.6 * cm
                 yy = y - 0.9 * cm
         if notes:
@@ -514,12 +514,12 @@ def imprimir_hoja_vida(request):
         if not items:
             return
         if yR < 4.0 * cm:
-            new_page(with_sidebar=True)
+            new_page(with_sidebar=False)
             yR = H - margin - 0.6 * cm
         yR = content_title(yR, title_name)
         for it in items:
             if yR < 3.2 * cm:
-                new_page(with_sidebar=True)
+                new_page(with_sidebar=False)
                 yR = H - margin - 0.6 * cm
                 yR = content_title(yR, title_name)
             yR = draw_item(it)
