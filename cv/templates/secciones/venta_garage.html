@@ -28,8 +28,13 @@
       {{ item.descripcion }}
     </div>
 
-    {% if item.imagenproducto %}
-      <img src="{{ item.imagenproducto.url }}" class="cv-preview">
+    <!-- IMAGEN DEBAJO DE LA DESCRIPCIÓN -->
+    {% if item.foto_producto %}
+      <img 
+        src="{{ item.foto_producto.url }}"
+        alt="{{ item.nombreproducto }}"
+        class="cv-preview"
+      >
     {% endif %}
 
   </div>
@@ -37,4 +42,3 @@
 </div>
 
 {% endblock %}
-
