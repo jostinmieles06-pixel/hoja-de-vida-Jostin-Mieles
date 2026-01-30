@@ -954,3 +954,103 @@ body {
   background-color: #fde047;
   color: #1f2937;
 }
+/* =========================
+   RECONOCIMIENTOS – SOLO IMAGEN
+========================= */
+
+.item-card .cv-preview {
+  width: auto;                 /* 🔥 se adapta a la imagen */
+  max-width: 320px;            /* mismo tamaño que otras secciones */
+  max-height: none;            /* sin límite vertical */
+  height: auto;
+
+  display: block;
+  margin: 14px auto 0;         /* centrada */
+
+  background: transparent;     /* 🔥 elimina fondo blanco */
+  border: none;                /* 🔥 elimina marco */
+  padding: 0;                  /* 🔥 elimina espacio extra */
+}
+/* =========================
+   RECONOCIMIENTOS – IMAGEN COMPACTA
+========================= */
+
+.recon-img-wrap {
+  display: inline-block;     /* 🔑 se ajusta al tamaño real */
+  margin-top: 14px;
+}
+
+/* =========================
+   RECONOCIMIENTOS – PREVIEW PEQUEÑO
+========================= */
+
+.recon-img-wrap img {
+  max-width: 180px;     /* 🔥 tamaño tipo Cursos */
+  height: auto;
+  display: block;
+
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+/* =========================
+   RECONOCIMIENTOS – FIX TOTAL
+========================= */
+
+.recon-img {
+  display: inline-block !important;
+  max-width: 160px !important;   /* 👈 tamaño final */
+  margin-top: 12px;
+}
+
+.recon-img img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+
+  display: block !important;
+
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 8px;
+}
+/* =========================
+   RECONOCIMIENTOS – TARJETITA
+========================= */
+
+.recon-card {
+  width: 140px;                 /* 👈 tamaño tarjeta */
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 12px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.recon-card img {
+  width: 100%;
+  height: 180px;                /* 👈 alto fijo tipo preview */
+  object-fit: cover;
+  border-radius: 8px;
+  background: #020617;
+}
+
+.recon-card span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+/* =========================
+   RECONOCIMIENTOS – SIN RECUADRO BLANCO
+========================= */
+
+.cv-card.dark .cv-preview {
+  background: transparent !important;   /* 🔥 quita el blanco */
+  border: none !important;               /* 🔥 quita borde */
+  padding: 0 !important;                 /* 🔥 quita espacio */
+}

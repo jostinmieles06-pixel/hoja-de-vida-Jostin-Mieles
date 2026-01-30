@@ -2,54 +2,35 @@
 
 {% block dashboard_content %}
 
-<section class="content-card">
-  <h1>🏅 Reconocimientos</h1>
+<h1>🏅 Reconocimientos</h1>
 
-  {% for r in items %}
-    <div class="item-card">
+<div class="cards-grid">
 
-      <h3>{{ r.tiporeconocimiento }}</h3>
+{% for r in items %}
+  <div class="cv-card dark">
 
-      <p><b>Entidad:</b> {{ r.entidadpatrocinadora }}</p>
-      <p><b>Fecha:</b> {{ r.fechareconocimiento }}</p>
+    <h3>{{ r.tiporeconocimiento }}</h3>
 
-      <p>{{ r.descripcionreconocimiento }}</p>
-
-      <!-- IMAGEN DEL RECONOCIMIENTO -->
-      {% if r.imagenreconocimiento %}
-        <img 
-          src="{{ r.imagenreconocimiento.url }}" 
-          alt="{{ r.tiporeconocimiento }}"
-          class="cv-preview"
-        >
-      {% endif %}
-
-      <!-- PDF DEL RECONOCIMIENTO -->
-      {% if r.documento_pdf %}
-        <div class="cv-footer">
-          <a 
-            href="{{ r.documento_pdf.url }}" 
-            target="_blank" 
-            class="cv-btn primary"
-          >
-            👁 Ver documento
-          </a>
-
-          <a 
-            href="{{ r.documento_pdf.url }}" 
-            download 
-            class="cv-btn outline"
-          >
-            ⬇ Descargar PDF
-          </a>
-        </div>
-      {% endif %}
-
+    <div class="cv-meta">
+      🏛 {{ r.entidadpatrocinadora }}<br>
+      📅 {{ r.fechareconocimiento }}
     </div>
-  {% empty %}
-    <p>No hay reconocimientos registrados.</p>
-  {% endfor %}
 
-</section>
+    <div class="cv-desc">
+      {{ r.descripcionreconocimiento }}
+    </div>
+
+    {% if r.certificado_imagen %}
+      <img 
+        src="{{ r.certificado_imagen.url }}"
+        alt="Reconocimiento {{ r.tiporeconocimiento }}"
+        class="cv-preview"
+      >
+    {% endif %}
+
+  </div>
+{% endfor %}
+
+</div>
 
 {% endblock %}

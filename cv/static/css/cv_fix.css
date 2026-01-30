@@ -857,3 +857,25 @@ h1, h2, h3 {
   border-radius: 8px;
   text-decoration: none;
 }
+/* =========================
+   RECONOCIMIENTOS – FIX TOTAL
+========================= */
+
+.recon-img {
+  display: inline-block !important;
+  max-width: 160px !important;   /* 👈 tamaño final */
+  margin-top: 12px;
+}
+
+.recon-img img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+
+  display: block !important;
+
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 8px;
+}
