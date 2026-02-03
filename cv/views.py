@@ -278,10 +278,16 @@ def venta_garage(request):
     })
 
 
-# =========================
-# PDF (ReportLab)
-# =========================
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse, HttpResponseForbidden
+
 def imprimir_hoja_vida(request):
+    # ==================================================
+    # LOGICA (INTACTA)
+    # ==================================================
     perfil = _get_perfil_activo()
 
     if not perfil:
@@ -290,411 +296,316 @@ def imprimir_hoja_vida(request):
     if not perfil.permitir_impresion:
         return HttpResponseForbidden("No autorizado", status=403)
 
-    # =========================
-    # Consultas ordenadas
-    # =========================
-    cursos_qs = list(
-        perfil.cursos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechafin", "-fechainicio", "-idcursorealizado")
-    )
-    exp_qs = list(
-        perfil.experiencias
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechafin", "-fechainicio", "-idexperiencialaboral")
-    )
-    rec_qs = list(
-        perfil.reconocimientos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechareconocimiento", "-idreconocimiento")
-    )
-    pa_qs = list(
-        perfil.productos_academicos
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-idproductoacademico")
-    )
-    pl_qs = list(
-        perfil.productos_laborales
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fechaproducto", "-idproductolaboral")
-    )
-    vg_qs = list(
-        perfil.venta_garage
-        .filter(activarparaqueseveaenfront=True)
-        .order_by("-fecha", "-idventagarage")
-    )
+    s = request.GET
+    show_exp = s.get("experiencia") == "on"
+    show_cur = s.get("cursos") == "on"
+    show_rec = s.get("reconocimientos") == "on"
+    show_pa  = s.get("prod_acad") == "on"
+    show_pl  = s.get("prod_lab") == "on"
+    show_vg  = s.get("venta") == "on"
 
-    cert_imgs, normal_imgs = _collect_images(perfil, cursos_qs, exp_qs, pa_qs, pl_qs, rec_qs)
+    exp_qs = list(perfil.experiencias.filter(activarparaqueseveaenfront=True)) if show_exp else []
+    cursos_qs = list(perfil.cursos.filter(activarparaqueseveaenfront=True)) if show_cur else []
+    rec_qs = list(perfil.reconocimientos.filter(activarparaqueseveaenfront=True)) if show_rec else []
+    pa_qs = list(perfil.productos_academicos.filter(activarparaqueseveaenfront=True)) if show_pa else []
+    pl_qs = list(perfil.productos_laborales.filter(activarparaqueseveaenfront=True)) if show_pl else []
+    vg_qs = list(perfil.venta_garage.filter(activarparaqueseveaenfront=True)) if show_vg else []
+
+    cert_imgs, normal_imgs = _collect_images(
+        perfil, cursos_qs, exp_qs, pa_qs, pl_qs, rec_qs,
+    )
+    evidencias = cert_imgs + normal_imgs
+
     FONT, FONT_B = _register_pretty_fonts()
 
     response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = 'inline; filename="hoja_de_vida.pdf"'
+    response["Content-Disposition"] = 'inline; filename="hoja_de_vida_pro.pdf"'
 
     c = canvas.Canvas(response, pagesize=A4)
     W, H = A4
 
-    # Colores
-    navy = colors.HexColor("#0b2a57")
-    navy2 = colors.HexColor("#0a2347")
-    white = colors.white
-    text = colors.HexColor("#0f172a")
-    muted = colors.HexColor("#475569")
-    border = colors.HexColor("#dbe4f5")
-    chip = colors.HexColor("#e9f0ff")
+    # ==================================================
+    # NUEVO DISEÑO "CANVA STYLE"
+    # ==================================================
+    # Paleta de colores
+    col_sidebar     = colors.HexColor("#1e293b")  # Dark Slate (Lateral)
+    col_sidebar_txt = colors.HexColor("#f8fafc")  # Off-white
+    col_accent      = colors.HexColor("#38bdf8")  # Light Blue/Cyan (Detalles)
+    col_title       = colors.HexColor("#0f172a")  # Dark text
+    col_text        = colors.HexColor("#475569")  # Gray text
+    col_line        = colors.HexColor("#e2e8f0")  # Light line
 
-    # Layout
-    margin = 1.2 * cm
-    sidebar_w = 5.7 * cm
-    gap = 0.8 * cm
-    content_x = margin + sidebar_w + gap
-    content_w = W - content_x - margin
-    lead_small = 12.5
+    # Dimensiones
+    sidebar_w = 7.0 * cm
+    margin_top = 1.0 * cm
+    margin_content = 1.0 * cm
+    
+    # Area de contenido principal
+    content_x = sidebar_w + margin_content
+    content_w = W - content_x - 0.8 * cm
 
-    # =========================
-    # Helpers de layout
-    # =========================
-    def draw_sidebar_background():
-        c.setFillColor(navy)
-        c.rect(0, 0, margin + sidebar_w + gap / 2, H, stroke=0, fill=1)
+    # ==================================================
+    # HELPER: SIDEBAR (FONDO + DATOS)
+    # ==================================================
+    def draw_sidebar():
+        # Fondo columna izquierda
+        c.setFillColor(col_sidebar)
+        c.rect(0, 0, sidebar_w, H, stroke=0, fill=1)
+        
+        # Cursor vertical
+        y = H - 1.5 * cm
 
-    def draw_circle_image(image_reader, cx, cy, r):
-        c.saveState()
-        p = c.beginPath()
-        p.circle(cx, cy, r)
-        c.clipPath(p, stroke=0, fill=0)
-        c.drawImage(image_reader, cx - r, cy - r, width=2 * r, height=2 * r, preserveAspectRatio=True, mask="auto")
-        c.restoreState()
-
-    def hr_sidebar(y):
-        c.setStrokeColor(colors.HexColor("#2a4a7d"))
-        c.setLineWidth(1)
-        c.line(margin, y, margin + sidebar_w - 0.2 * cm, y)
-
-    # =========================
-    # Sidebar content
-    # =========================
-    def draw_sidebar_content():
-        top_y = H - margin - 0.4 * cm
-
-        # FOTO PERFIL
-        if perfil.foto_perfil and getattr(perfil.foto_perfil, "name", None):
+        # --- FOTO DE PERFIL (CIRCULAR) ---
+        if perfil.foto_perfil:
             try:
-                img_reader = _image_reader_from_field(perfil.foto_perfil)
-                draw_circle_image(img_reader, margin + 2.0 * cm, top_y - 1.85 * cm, 1.55 * cm)
-            except Exception:
+                img = _image_reader_from_field(perfil.foto_perfil)
+                
+                # Configurar máscara circular
+                c.saveState()
+                path = c.beginPath()
+                # Centro del circulo: (sidebar_w / 2, y - radio)
+                radio = 2.2 * cm
+                center_x = sidebar_w / 2
+                center_y = y - radio
+                
+                path.circle(center_x, center_y, radio)
+                c.clipPath(path, stroke=0)
+                
+                # Dibujar imagen
+                c.drawImage(img, center_x - radio, center_y - radio, radio*2, radio*2, preserveAspectRatio=True, anchor='c')
+                c.restoreState()
+                
+                # Borde decorativo
+                c.setStrokeColor(col_accent)
+                c.setLineWidth(2)
+                c.circle(center_x, center_y, radio, stroke=1, fill=0)
+                
+                y -= (radio * 2) + 1.0 * cm
+            except:
                 pass
+        else:
+            y -= 2 * cm
 
-        # NOMBRE ENVUELTO
-        nombre = f"{(perfil.nombres or '').strip()} {(perfil.apellidos or '').strip()}".strip() or "Perfil"
-        c.setFillColor(white)
-        c.setFont(FONT_B, 14.2)
-        y_actual = _draw_wrapped(c, nombre, margin, top_y - 4.05 * cm, sidebar_w - 0.2 * cm, FONT_B, 14.2, 16)
-
-        # SUBTÍTULO / DESCRIPCIÓN PERFIL
-        desc_local = _clean(perfil.descripcionperfil)
-        if desc_local:
-            y_desc = y_actual - 0.25 * cm
-            c.setFillColor(colors.HexColor("#d7e6ff"))
-            c.setFont(FONT, 9.6)
-            y_actual = _draw_wrapped(c, desc_local, margin, y_desc, sidebar_w - 0.2 * cm, FONT, 9.6, 12)
-
-        # DATOS PERSONALES
-        yL = y_actual - 0.9 * cm
-        hr_sidebar(yL + 0.45 * cm)
-        c.setFillColor(colors.HexColor("#d7e6ff"))
-        c.setFont(FONT_B, 10)
-        c.drawString(margin, yL, "DATOS PERSONALES")
-        yL -= 0.65 * cm
-
-        dp_pairs = _pairs_from_fields([
-            ("Cédula", perfil.numerocedula),
-            ("Sexo", perfil.sexo),
-            ("Estado civil", perfil.estadocivil),
-            ("Fecha nac.", perfil.fechanacimiento),
-            ("Nacionalidad", perfil.nacionalidad),
-            ("Lugar nac.", perfil.lugarnacimiento),
-            ("Licencia", perfil.licenciaconducir),
-            ("Teléfono", perfil.telefonofijo),
-            ("Convencional", perfil.telefonoconvencional),
-            ("Dirección dom.", perfil.direcciondomiciliaria),
-            ("Dirección trab.", perfil.direcciontrabajo),
-            ("Sitio web", perfil.sitioweb),
-        ])
-
-        for label, val in dp_pairs:
-            c.setFillColor(colors.HexColor("#d7e6ff"))
-            c.setFont(FONT_B, 9.1)
-            c.drawString(margin, yL, f"{label}:")
-            yL -= 0.35 * cm
-            c.setFillColor(white)
-            c.setFont(FONT, 9.5)
-            yL = _draw_wrapped(c, val, margin, yL, sidebar_w - 0.2 * cm, FONT, 9.5, 11.5)
-            yL -= 0.25 * cm
-            if yL < 1.6 * cm:
-                break
-
-    # =========================
-    # New page
-    # =========================
-    def new_page(with_sidebar=True):
-        c.showPage()
-        if with_sidebar:
-            draw_sidebar_background()
-            draw_sidebar_content()
-
-    # =========================
-    # Content title y card
-    # =========================
-    def content_title(y, s):
-        c.setFillColor(text)
-        c.setFont(FONT_B, 13.8)
-        c.drawString(content_x, y, s)
-        c.setStrokeColor(border)
-        c.setLineWidth(1)
-        c.line(content_x, y - 0.25 * cm, content_x + content_w, y - 0.25 * cm)
-        return y - 0.85 * cm
-
-    def content_card(y, title_s, pairs, notes=None):
-        pairs = _pairs_from_fields(pairs)
-        notes = _clean(notes)
-        if not pairs and not notes:
-            return y
-        if y < 4.0 * cm:
-            new_page(with_sidebar=False)
-            y = H - margin - 0.6 * cm
-        inner_x = content_x
-        inner_w = content_w
-        c.setFillColor(navy2)
-        c.setFont(FONT_B, 11.6)
-        c.drawString(inner_x, y - 0.2 * cm, (title_s or "")[:92])
-        yy = y - 0.75 * cm
-        for label, val in pairs:
-            c.setFillColor(text)
-            c.setFont(FONT_B, 9.8)
-            c.drawString(inner_x, yy, f"{label}:")
-            c.setFillColor(muted)
-            c.setFont(FONT, 9.8)
-            yy = _draw_wrapped(c, val, inner_x + 3.25 * cm, yy, inner_w - 3.25 * cm, FONT, 9.8, lead_small)
-            yy -= 2
-            if yy < 2.2 * cm:
-                new_page(with_sidebar=False)
-                y = H - margin - 0.6 * cm
-                yy = y - 0.9 * cm
-        if notes:
-            yy -= 6
-            c.setFillColor(text)
-            c.setFont(FONT_B, 9.8)
-            c.drawString(inner_x, yy, "Descripción:")
-            yy -= lead_small
-            c.setFillColor(muted)
-            c.setFont(FONT, 9.8)
-            yy = _draw_wrapped(c, notes, inner_x, yy, inner_w, FONT, 9.8, lead_small)
-        yy -= 0.25 * cm
-        c.setStrokeColor(border)
-        c.setLineWidth(0.7)
-        c.line(content_x, yy, content_x + content_w, yy)
-        return yy - 0.45 * cm
-
-    # =========================
-    # Dibujar todo
-    # =========================
-    draw_sidebar_background()
-    draw_sidebar_content()
-
-    yR = H - margin - 0.6 * cm
-    desc = _clean(perfil.descripcionperfil)
-    if desc:
-        yR = content_title(yR, "Perfil profesional")
-        yR = content_card(yR, "Resumen", [], desc)
-        yR -= 0.2 * cm
-
-    # Secciones
-    def section(title_name, items, draw_item):
-        nonlocal yR
-        if not items:
-            return
-        if yR < 4.0 * cm:
-            new_page(with_sidebar=False)
-            yR = H - margin - 0.6 * cm
-        yR = content_title(yR, title_name)
-        for it in items:
-            if yR < 3.2 * cm:
-                new_page(with_sidebar=False)
-                yR = H - margin - 0.6 * cm
-                yR = content_title(yR, title_name)
-            yR = draw_item(it)
-            yR -= 0.10 * cm
-        yR -= 0.25 * cm
-
-    # =========================
-    # Secciones de datos
-    # =========================
-    section("Experiencia laboral", exp_qs, lambda it: content_card(
-        yR,
-        ((it.cargodesempenado or "Experiencia") + (f" — {it.nombrempresa}" if it.nombrempresa else "")).strip(),
-        [
-            ("Inicio", it.fechainicio),
-            ("Fin", it.fechafin),
-            ("Lugar", it.lugarempresa),
-            ("Dirección", it.direccionempresa),
-            ("Sitio web", it.sitiowebempresa),
-            ("Email", it.emailempresa),
-            ("Teléfono", it.telefonoempresa),
-            ("Contacto", it.nombrecontactoempresarial),
-            ("Tel. contacto", it.telefonocontactoempresarial),
-            ("Funciones", it.descripcionfunciones),
-        ],
-        it.responsabilidades
-    ))
-
-    section("Cursos realizados", cursos_qs, lambda it: content_card(
-        yR,
-        it.nombrecurso or "Curso",
-        [
-            ("Inicio", it.fechainicio),
-            ("Fin", it.fechafin),
-            ("Total horas", it.totalhoras),
-            ("Entidad", it.entidadpatrocinadora),
-            ("Contacto", it.nombrecontactoauspicia),
-            ("Tel. contacto", it.telefonocontactoauspicia),
-            ("Email entidad", it.emailempresapatrocinadora),
-        ],
-        it.descripcioncurso
-    ))
-
-    section("Productos académicos", pa_qs, lambda it: content_card(
-        yR,
-        it.nombreproducto or "Producto académico",
-        [("Clasificador", it.clasificador)],
-        it.descripcion
-    ))
-
-    section("Productos laborales", pl_qs, lambda it: content_card(
-        yR,
-        it.nombreproducto or "Producto laboral",
-        [("Fecha", it.fechaproducto)],
-        it.descripcion
-    ))
-
-    section("Reconocimientos", rec_qs, lambda it: content_card(
-        yR,
-        ((it.tiporeconocimiento or "Reconocimiento") + (f" — {it.entidadpatrocinadora}" if it.entidadpatrocinadora else "")).strip(),
-        [
-            ("Fecha", it.fechareconocimiento),
-            ("Tipo", it.tiporeconocimiento),
-            ("Entidad", it.entidadpatrocinadora),
-        ],
-        it.descripcionreconocimiento
-    ))
-
-    section("Venta garage", vg_qs, lambda it: content_card(
-        yR,
-        it.nombreproducto or "Producto",
-        [
-            ("Fecha", it.fecha),
-            ("Estado", it.estadoproducto),
-            ("Valor", f"${it.valordelbien}" if it.valordelbien is not None else ""),
-        ],
-        it.descripcion
-    ))
-
-    # =========================
-    # Certificados full page
-    # =========================
-    if cert_imgs:
-        for ev in cert_imgs:
-            new_page(with_sidebar=False)
-            c.setFillColor(navy2)
-            c.rect(0, H - 2.0 * cm, W, 2.0 * cm, stroke=0, fill=1)
-            c.setFillColor(white)
-            c.setFont(FONT_B, 13.5)
-            c.drawString(margin, H - 1.3 * cm, f'{ev["section"]} | {ev["label"]}'[:100])
-            top = H - 2.35 * cm
-            bottom = margin
-            left = margin
-            right = W - margin
-            box_w = right - left
-            box_h = top - bottom
-            c.setFillColor(colors.white)
-            c.setStrokeColor(border)
-            c.roundRect(left, bottom, box_w, box_h, 10, stroke=1, fill=1)
-            try:
-                img_reader = _image_reader_from_field(ev["field"])
-                c.drawImage(
-                    img_reader,
-                    left + 0.25 * cm,
-                    bottom + 0.25 * cm,
-                    width=box_w - 0.5 * cm,
-                    height=box_h - 0.5 * cm,
-                    preserveAspectRatio=True,
-                    anchor="c",
-                    mask="auto"
-                )
-            except Exception:
-                c.setFillColor(colors.red)
-                c.setFont(FONT, 11)
-                c.drawString(left + 0.6 * cm, top - 1.0 * cm, "No se pudo cargar la imagen del certificado.")
-
-    # =========================
-    # Imágenes normales
-    # =========================
-    if normal_imgs:
-        new_page(with_sidebar=False)
-        c.setFillColor(navy2)
-        c.rect(0, H - 2.0 * cm, W, 2.0 * cm, stroke=0, fill=1)
-        c.setFillColor(white)
+        # --- NOMBRE ---
+        c.setFillColor(col_sidebar_txt)
         c.setFont(FONT_B, 16)
-        c.drawString(margin, H - 1.3 * cm, "Imágenes")
+        
+        # Dividir nombre si es muy largo
+        full_name = f"{perfil.nombres}\n{perfil.apellidos}"
+        for line in full_name.split("\n"):
+            c.drawCentredString(sidebar_w / 2, y, line.upper())
+            y -= 0.7 * cm
+        
+        y -= 1.0 * cm
 
-        y_ev = H - 2.55 * cm
-        col_w = (W - 2 * margin - 0.55 * cm) / 2
-        img_h = 6.0 * cm
-        caption_h = 1.05 * cm
-        block_h = img_h + caption_h + 0.5 * cm
-        x1 = margin
-        x2 = margin + col_w + 0.55 * cm
-        i = 0
+        # --- SECCION DATOS ---
+        c.setFillColor(col_accent)
+        c.setFont(FONT_B, 10)
+        c.drawString(0.8 * cm, y, "INFORMACIÓN PERSONAL")
+        c.setStrokeColor(col_accent)
+        c.line(0.8 * cm, y - 0.2*cm, sidebar_w - 0.8*cm, y - 0.2*cm)
+        y -= 0.8 * cm
 
-        while i < len(normal_imgs):
-            if y_ev - block_h < 1.6 * cm:
-                new_page(with_sidebar=False)
-                y_ev = H - margin
+        datos = [
+            ("Cédula", perfil.numerocedula),
+            ("Nacimiento", str(perfil.fechanacimiento) if perfil.fechanacimiento else ""),
+            ("Teléfono", perfil.telefonofijo),
+            ("Dirección", perfil.direcciondomiciliaria),
+            ("Estado Civil", perfil.estadocivil),
+        ]
 
-            for x in (x1, x2):
-                if i >= len(normal_imgs):
-                    break
-                ev = normal_imgs[i]
-                i += 1
-                c.setStrokeColor(border)
+        for label, val in datos:
+            if not val: continue
+            
+            # Label
+            c.setFillColor(colors.HexColor("#94a3b8")) # Gris azulado claro
+            c.setFont(FONT_B, 8)
+            c.drawString(0.8 * cm, y, label.upper())
+            y -= 0.4 * cm
+            
+            # Valor (con wrap)
+            c.setFillColor(col_sidebar_txt)
+            c.setFont(FONT, 9)
+            # Usamos tu funcion _draw_wrapped
+            # Nota: ajustamos el width para que quepa en el sidebar
+            y = _draw_wrapped(c, str(val), 0.8 * cm, y, sidebar_w - 1.6 * cm, FONT, 9, 12)
+            y -= 0.4 * cm # Espacio extra entre items
+
+    # ==================================================
+    # HELPER: CONTENIDO PRINCIPAL
+    # ==================================================
+    y_content = H - margin_top - 0.5 * cm
+
+    def check_space(needed_cm):
+        nonlocal y_content
+        # Si no hay espacio, nueva pagina
+        if y_content < (margin_top + needed_cm * cm):
+            c.showPage()
+            draw_sidebar()
+            y_content = H - margin_top - 1.5 * cm
+            return True
+        return False
+
+    def draw_section_title(title):
+        nonlocal y_content
+        check_space(2.5)
+        
+        c.setFillColor(col_title)
+        c.setFont(FONT_B, 14)
+        c.drawString(content_x, y_content, title.upper())
+        
+        # Linea gruesa decorativa debajo del titulo
+        c.setLineWidth(3)
+        c.setStrokeColor(col_accent)
+        c.line(content_x, y_content - 0.25*cm, content_x + 1.2*cm, y_content - 0.25*cm)
+        
+        # Linea fina extendida
+        c.setLineWidth(1)
+        c.setStrokeColor(col_line)
+        c.line(content_x + 1.4*cm, y_content - 0.25*cm, content_x + content_w, y_content - 0.25*cm)
+        
+        y_content -= 1.2 * cm
+
+    def draw_card(titulo, subtitulo):
+        nonlocal y_content
+        # Estimar altura para salto de pagina (calculo aproximado)
+        lines = len(str(subtitulo).split('\n')) if subtitulo else 1
+        height_aprox = 1.5 + (lines * 0.5)
+        check_space(height_aprox)
+        
+        # Posiciones
+        bullet_x = content_x + 0.2 * cm
+        text_x = content_x + 1.0 * cm
+        
+        # Titulo item
+        c.setFillColor(col_sidebar) # Usamos el color oscuro
+        c.setFont(FONT_B, 11)
+        c.drawString(text_x, y_content, titulo)
+        y_content -= 0.5 * cm
+        
+        # Texto cuerpo
+        c.setFillColor(col_text)
+        c.setFont(FONT, 10)
+        y_start_text = y_content
+        y_content = _draw_wrapped(c, subtitulo or "", text_x, y_content, content_w - 1.0*cm, FONT, 10, 14)
+        
+        # Decoración lateral (Linea vertical tipo timeline)
+        c.setStrokeColor(col_line)
+        c.setLineWidth(1)
+        # Dibujamos linea desde el titulo hasta el final del texto
+        c.line(bullet_x, y_start_text + 0.5*cm, bullet_x, y_content + 0.2*cm)
+        
+        # Punto (Bullet)
+        c.setFillColor(col_accent)
+        c.circle(bullet_x, y_start_text + 0.65*cm, 0.12*cm, fill=1, stroke=0)
+        
+        y_content -= 0.6 * cm
+
+    # ==================================================
+    # RENDERIZADO CV
+    # ==================================================
+    
+    # 1. Dibujar sidebar inicial
+    draw_sidebar()
+
+    # 2. Renderizar secciones activas
+    if show_exp and exp_qs:
+        draw_section_title("Experiencia Laboral")
+        for it in exp_qs:
+            draw_card(it.cargodesempenado, it.responsabilidades)
+
+    if show_cur and cursos_qs:
+        draw_section_title("Formación y Cursos")
+        for it in cursos_qs:
+            draw_card(it.nombrecurso, it.descripcioncurso)
+
+    if show_pa and pa_qs:
+        draw_section_title("Productos Académicos")
+        for it in pa_qs:
+            draw_card(it.nombreproducto, it.descripcion)
+
+    if show_pl and pl_qs:
+        draw_section_title("Productos Laborales")
+        for it in pl_qs:
+            draw_card(it.nombreproducto, it.descripcion)
+
+    if show_rec and rec_qs:
+        draw_section_title("Reconocimientos")
+        for it in rec_qs:
+            draw_card(it.tiporeconocimiento, it.descripcionreconocimiento)
+
+    if show_vg and vg_qs:
+        draw_section_title("Otros")
+        for it in vg_qs:
+            draw_card(it.nombreproducto, it.descripcion)
+
+    # ==================================================
+    # GALERÍA DE EVIDENCIAS (NUEVO DISEÑO GRID)
+    # ==================================================
+    if evidencias:
+        c.showPage()
+        
+        # Cabecera Galeria
+        c.setFillColor(col_sidebar)
+        c.rect(0, H - 2.5*cm, W, 2.5*cm, fill=1, stroke=0)
+        c.setFillColor(colors.white)
+        c.setFont(FONT_B, 18)
+        c.drawCentredString(W/2, H - 1.5*cm, "GALERÍA DE EVIDENCIAS")
+        
+        # Config grid
+        margin_g = 1.5 * cm
+        cols = 2
+        col_width = (W - (margin_g * 2) - 1.0*cm) / 2
+        
+        y_cursor = H - 3.5 * cm
+        row_height = 7.5 * cm # Altura fija por "tarjeta"
+        
+        for i, ev in enumerate(evidencias):
+            # Salto de pagina si no cabe la fila
+            if y_cursor < margin_g + row_height:
+                c.showPage()
+                # Repetir cabecera pequeña
+                c.setFillColor(col_sidebar)
+                c.rect(0, H - 1.5*cm, W, 1.5*cm, fill=1, stroke=0)
                 c.setFillColor(colors.white)
-                c.roundRect(x, y_ev - img_h, col_w, img_h, 10, stroke=1, fill=1)
-                try:
-                    img_reader = _image_reader_from_field(ev["field"])
-                    c.drawImage(
-                        img_reader,
-                        x + 0.2 * cm, y_ev - img_h + 0.2 * cm,
-                        width=col_w - 0.4 * cm, height=img_h - 0.4 * cm,
-                        preserveAspectRatio=True,
-                        anchor="sw",
-                        mask="auto"
-                    )
-                except Exception:
-                    c.setFillColor(colors.red)
-                    c.setFont(FONT, 9.5)
-                    c.drawString(x + 0.25 * cm, y_ev - 0.7 * cm, "No se pudo cargar la imagen.")
-                c.setFillColor(chip)
-                c.setStrokeColor(border)
-                c.roundRect(x, y_ev - img_h - caption_h, col_w, caption_h, 9, stroke=1, fill=1)
-                c.setFillColor(navy)
-                c.setFont(FONT_B, 9.2)
-                c.drawString(x + 0.25 * cm, y_ev - img_h - 0.5 * cm, (ev["section"] or "")[:30])
-                c.setFillColor(text)
-                c.setFont(FONT, 9.1)
-                cap_y = y_ev - img_h - 0.83 * cm
-                _draw_wrapped(c, ev["label"] or "", x + 2.1 * cm, cap_y, col_w - 2.35 * cm, FONT, 9.1, 11.0)
+                c.setFont(FONT_B, 12)
+                c.drawString(margin_g, H - 1.0*cm, "Galería (cont.)")
+                y_cursor = H - 2.5 * cm
 
-            y_ev -= block_h
+            # Calculo X (columna 0 o 1)
+            col_idx = i % 2
+            x_pos = margin_g + (col_idx * (col_width + 1.0*cm))
+            
+            # --- TARJETA IMAGEN ---
+            # Fondo tarjeta
+            c.setFillColor(colors.HexColor("#f1f5f9"))
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.roundRect(x_pos, y_cursor - row_height, col_width, row_height, 8, fill=1, stroke=1)
+            
+            # Imagen
+            img_h = 4.5 * cm
+            try:
+                img = _image_reader_from_field(ev["field"])
+                # Dibujar imagen con padding
+                c.drawImage(img, x_pos + 0.2*cm, y_cursor - img_h - 0.2*cm, 
+                          col_width - 0.4*cm, img_h, 
+                          preserveAspectRatio=True, anchor='c', mask='auto')
+            except:
+                pass
+            
+            # Texto Caption
+            text_area_y = y_cursor - img_h - 0.5*cm
+            c.setFillColor(col_title)
+            c.setFont(FONT_B, 9)
+            c.drawString(x_pos + 0.3*cm, text_area_y, ev["section"])
+            
+            c.setFillColor(col_text)
+            c.setFont(FONT, 8)
+            _draw_wrapped(c, ev["label"], x_pos + 0.3*cm, text_area_y - 0.4*cm, col_width - 0.6*cm, FONT, 8, 10)
+            
+            # Bajar cursor solo si terminamos la fila (indice impar o ultimo elemento)
+            if col_idx == 1 or i == len(evidencias) - 1:
+                y_cursor -= (row_height + 0.5 * cm)
 
-    c.showPage()
     c.save()
     return response
