@@ -31,17 +31,36 @@ def _get_perfil_activo():
     # SOLO perfil activo. Si no hay, devuelve None (y el front no debe mostrar nada).
     return Datospersonales.objects.filter(perfilactivo=True).order_by("-idperfil").first()
 
+from PIL import Image
+import io
+from reportlab.lib.utils import ImageReader
 
 def _image_reader_from_field(image_field):
+    """
+    Optimiza imágenes para PDF y evita error 502 en Render.
+    NO cambia el diseño.
+    """
     image_field.open("rb")
-    try:
-        data = image_field.read()
-    finally:
-        try:
-            image_field.close()
-        except Exception:
-            pass
-    return ImageReader(io.BytesIO(data))
+
+    img = Image.open(image_field)
+    img = img.convert("RGB")
+
+    # 🔥 CLAVE: limitar tamaño máximo (memoria)
+    img.thumbnail((1600, 1600))
+
+    buffer = io.BytesIO()
+    img.save(
+        buffer,
+        format="JPEG",
+        quality=80,
+        optimize=True
+    )
+    buffer.seek(0)
+
+    image_field.close()
+
+    return ImageReader(buffer)
+
 
 
 def _register_pretty_fonts():
